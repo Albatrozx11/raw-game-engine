@@ -64,10 +64,8 @@ int main() {
 		};
 
 		window.clear(sf::Color::Black);
-		sf::CircleShape circle(100.0f);
-
-		circle.setFillColor(sf::Color::Red);
-		window.draw(circle);
+		
+		//window.draw(circle);
 		window.display();
 
 	}
