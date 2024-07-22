@@ -97,13 +97,7 @@ int main() {
 	projMatrix[2][3] = 1.0f;
 	projMatrix[3][3] = 0.0f;
 
-	//normalize all triangles using projection matrix
-	for (auto tri : meshCube.tris) {
-		triangle triProjected;
-		MultiplyMatrixVector(tri.p[0], triProjected.p[0], projMatrix);
-		MultiplyMatrixVector(tri.p[1], triProjected.p[1], projMatrix);
-		MultiplyMatrixVector(tri.p[2], triProjected.p[2], projMatrix);
-	}
+
 
 
 	//GAME LOOP
@@ -120,8 +114,46 @@ int main() {
 		//clear the window before drawing
 		window.clear(sf::Color::Black);
 		
-		//window.draw(circle);
+		
 
+		//normalize all triangles using projection matrix
+		for (auto& tri : meshCube.tris) {
+			triangle triProjected,triTranslated;
+
+			triTranslated = tri;
+			for (int i = 0; i < 3; i++) {
+				triTranslated.p[i].z = tri.p[i].z + 3.0f;
+			}
+			MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
+			MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
+			MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
+
+			for (int i = 0; i < 3; i++) {
+				//Translate to screen space
+				triProjected.p[i].x += 1.0f;
+				triProjected.p[i].y += 1.0f;
+
+				//scale to screen space
+				triProjected.p[i].x *= 0.5f * screenWidth;
+				triProjected.p[i].y *= 0.5f * screenHeight;
+			}
+
+			//Define and draw the triangle
+			sf::ConvexShape scaledTriangle;
+			scaledTriangle.setPointCount(3);
+
+			for (int i = 0; i < 3; i++) {
+
+				scaledTriangle.setPoint(i, sf::Vector2f(triProjected.p[i].x, triProjected.p[i].y));
+
+			}
+			scaledTriangle.setFillColor(sf::Color::Transparent);
+			scaledTriangle.setOutlineThickness(1);
+			window.draw(scaledTriangle);
+
+		}
+
+		
 		//display window after drawing
 		window.display();
 
