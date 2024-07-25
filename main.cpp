@@ -34,7 +34,7 @@ int main() {
 	settings.antialiasingLevel = 8;//set anti aliasing level
 
 	//initialize sfml window
-	sf::RenderWindow window(sf::VideoMode(800, 600), "RAW",sf::Style::Default,settings);
+	sf::RenderWindow window(sf::VideoMode(1500,800), "RAW",sf::Style::Default,settings);
 
 	window.setVerticalSyncEnabled(true);
 
