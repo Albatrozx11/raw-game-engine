@@ -1,7 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-
+#include <cmath>
 //3d coordinate
 struct vec3d {
 	float x, y, z;
@@ -37,6 +37,9 @@ int main() {
 	sf::RenderWindow window(sf::VideoMode(800, 600), "RAW",sf::Style::Default,settings);
 
 	window.setVerticalSyncEnabled(true);
+
+	//declare clock variable of sfml
+	sf::Clock Clock;
 
 	//create a cube mesh
 	mesh meshCube;
@@ -79,8 +82,11 @@ int main() {
 	float screenWidth = (float)window.getSize().x;
 	float screenHeight = (float)window.getSize().y;
 
-	//initialize projection matrix
+	//define projection matrix
 	float projMatrix[4][4] = { 0.0f };
+	//define rotation matrices
+	float rotZMat[4][4] = { 0.0f };
+	float rotXMat[4][4] = { 0.0f };
 	
 	//projection matrix
 	float fAspectRatio =  screenHeight / screenWidth;
@@ -97,12 +103,16 @@ int main() {
 	projMatrix[2][3] = 1.0f;
 	projMatrix[3][3] = 0.0f;
 
-
-
-
+	float ftheta = 0.0f;
+	
 	//GAME LOOP
 	while (window.isOpen()) {
 		sf::Event event;
+
+		//accumulate the time elapsed and restart the clock
+		ftheta += 1.0f * Clock.getElapsedTime().asSeconds();
+		Clock.restart();
+
 
 		//check for window close event
 		while (window.pollEvent(event)) {
@@ -113,17 +123,44 @@ int main() {
 
 		//clear the window before drawing
 		window.clear(sf::Color::Black);
-		
-		
+
+		//initialize X rotation matrix
+		rotXMat[0][0] = 1.0f;
+		rotXMat[1][1] = cosf(ftheta * 0.5f);
+		rotXMat[1][2] = sinf(ftheta * 0.5f);
+		rotXMat[2][1] = -sinf(ftheta * 0.5f);
+		rotXMat[2][2] = cosf(ftheta * 0.5f);
+		rotXMat[3][3] = 1.0f;
+
+		//initialize Z rotation matrix
+		rotZMat[0][0] = cosf(ftheta);
+		rotZMat[0][1] = -sinf(ftheta);
+		rotZMat[1][0] = sinf(ftheta);
+		rotZMat[1][1] = cosf(ftheta);
+		rotZMat[2][2] = 1.0f;
+		rotZMat[3][3] = 1.0f;
 
 		//normalize all triangles using projection matrix
 		for (auto& tri : meshCube.tris) {
-			triangle triProjected,triTranslated;
+			triangle triProjected,triTranslated,triZRotated,triZXRotated;
 
-			triTranslated = tri;
+			//Rotate in Z axis
+			MultiplyMatrixVector(tri.p[0], triZRotated.p[0], rotZMat);
+			MultiplyMatrixVector(tri.p[1], triZRotated.p[1], rotZMat);
+			MultiplyMatrixVector(tri.p[2], triZRotated.p[2], rotZMat);
+
+			//Rotate in X axis
+			MultiplyMatrixVector(triZRotated.p[0], triZXRotated.p[0], rotXMat);
+			MultiplyMatrixVector(triZRotated.p[1], triZXRotated.p[1], rotXMat);
+			MultiplyMatrixVector(triZRotated.p[2], triZXRotated.p[2], rotXMat);
+
+
+			//Translate the triangle in the z axis
+			triTranslated = triZXRotated;
 			for (int i = 0; i < 3; i++) {
-				triTranslated.p[i].z = tri.p[i].z + 3.0f;
+				triTranslated.p[i].z = triZXRotated.p[i].z + 3.0f;
 			}
+
 			MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
 			MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
 			MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
@@ -139,21 +176,17 @@ int main() {
 			}
 
 			//Define and draw the triangle
-			sf::ConvexShape scaledTriangle;
-			scaledTriangle.setPointCount(3);
-
-			for (int i = 0; i < 3; i++) {
-
-				scaledTriangle.setPoint(i, sf::Vector2f(triProjected.p[i].x, triProjected.p[i].y));
-
-			}
-			scaledTriangle.setFillColor(sf::Color::Transparent);
-			scaledTriangle.setOutlineThickness(1);
-			window.draw(scaledTriangle);
+			sf::Vertex trianglePoints[] = {
+				sf::Vector2f(triProjected.p[0].x,triProjected.p[0].y),
+				sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
+				sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
+				sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y)
+			};
+			
+			window.draw(trianglePoints, 4, sf::LineStrip);
 
 		}
 
-		
 		//display window after drawing
 		window.display();
 
