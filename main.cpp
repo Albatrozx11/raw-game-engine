@@ -47,8 +47,8 @@ int main() {
 	//initialize the cube mesh with coordinates
 	meshCube.tris = {
 		//SOUTH
-		{0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, 0.0f,},
-		{0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f,},
+		{0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, 0.0f},
+		{0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f},
 
 
 		//EAST
@@ -177,13 +177,13 @@ int main() {
 
 			//Define and draw the triangle
 			sf::Vertex trianglePoints[] = {
-				sf::Vector2f(triProjected.p[0].x,triProjected.p[0].y),
+				sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
 				sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
 				sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
-				sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y)
 			};
-			
-			window.draw(trianglePoints, 4, sf::LineStrip);
+			trianglePoints[0].color = sf::Color::Transparent;
+			trianglePoints[1].color = sf::Color::Transparent;
+			window.draw(trianglePoints, 3, sf::Triangles);
 
 		}
 
