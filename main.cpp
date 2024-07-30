@@ -183,6 +183,19 @@ int main() {
 				((normal.y) * (triTranslated.p[0].y - vCamera.y)) +
 				((normal.z) * (triTranslated.p[0].z - vCamera.z)) < 0.0f) {
 
+				//add a ligh_direction that points to the player
+				vec3d light_direction = { 0.0f,0.0f,-1.0f };
+
+				//normalize light_direction
+				float light_mag = sqrtf(light_direction.x * light_direction.x + light_direction.y * light_direction.y + light_direction.z * light_direction.z);
+
+				light_direction.x /= light_mag; light_direction.y /= light_mag; light_direction.z /= light_mag;
+
+				//get similarity b/w normal and light_direction
+				float dp = (normal.x * light_direction.x) + (normal.y * light_direction.y) + (normal.z * light_direction.z);
+
+
+				//project to 2D space
 				MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
 				MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
 				MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
@@ -202,10 +215,17 @@ int main() {
 					sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
 					sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
 					sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
-					sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y)
 				};
 
-				window.draw(trianglePoints, 4, sf::LinesStrip);
+
+				//color the cube using lighting information
+				sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp);
+				trianglePoints[0].color = color;
+				trianglePoints[1].color = color;
+				trianglePoints[2].color = color;
+
+				//draw the cube
+				window.draw(trianglePoints, 3, sf::Triangles);
 
 			}
 
