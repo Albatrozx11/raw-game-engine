@@ -17,6 +17,7 @@ struct mesh {
 	std::vector<triangle> tris;
 };
 
+vec3d vCamera;
 
 void MultiplyMatrixVector(vec3d& i, vec3d& j, float m[4][4]) {
 	j.x = i.x * m[0][0] + i.y * m[1][0] + i.z * m[2][0] + m[3][0];
@@ -161,29 +162,52 @@ int main() {
 				triTranslated.p[i].z = triZXRotated.p[i].z + 3.0f;
 			}
 
-			MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
-			MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
-			MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
+			vec3d line1, line2, normal;
+			line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
+			line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
+			line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
 
-			for (int i = 0; i < 3; i++) {
-				//Translate to screen space
-				triProjected.p[i].x += 1.0f;
-				triProjected.p[i].y += 1.0f;
+			line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
+			line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
+			line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
 
-				//scale to screen space
-				triProjected.p[i].x *= 0.5f * screenWidth;
-				triProjected.p[i].y *= 0.5f * screenHeight;
+			normal.x = line1.y * line2.z - line1.z * line2.y;
+			normal.y = line1.z * line2.x - line1.x * line2.z;
+			normal.z = line1.x * line2.y - line1.y * line2.x;
+
+			//normalize the normal
+			float mag = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+			normal.x /= mag; normal.y /= mag; normal.z /= mag;
+
+			if (((normal.x) * (triTranslated.p[0].x - vCamera.x)) +
+				((normal.y) * (triTranslated.p[0].y - vCamera.y)) +
+				((normal.z) * (triTranslated.p[0].z - vCamera.z)) < 0.0f) {
+
+				MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
+				MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
+				MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
+
+				for (int i = 0; i < 3; i++) {
+					//Translate to screen space
+					triProjected.p[i].x += 1.0f;
+					triProjected.p[i].y += 1.0f;
+
+					//scale to screen space
+					triProjected.p[i].x *= 0.5f * screenWidth;
+					triProjected.p[i].y *= 0.5f * screenHeight;
+				}
+
+				//Define and draw the triangle
+				sf::Vertex trianglePoints[] = {
+					sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
+					sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
+					sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
+					sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y)
+				};
+
+				window.draw(trianglePoints, 4, sf::LinesStrip);
+
 			}
-
-			//Define and draw the triangle
-			sf::Vertex trianglePoints[] = {
-				sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
-				sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
-				sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
-			};
-			trianglePoints[0].color = sf::Color::Transparent;
-			trianglePoints[1].color = sf::Color::Transparent;
-			window.draw(trianglePoints, 3, sf::Triangles);
 
 		}
 
