@@ -219,7 +219,8 @@ int main() {
 
 
 				//color the cube using lighting information
-				sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp);
+				sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp); //color(r,g,b)
+
 				trianglePoints[0].color = color;
 				trianglePoints[1].color = color;
 				trianglePoints[2].color = color;
