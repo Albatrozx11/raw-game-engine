@@ -2,6 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <fstream>
+#include <strstream>
 //3d coordinate
 struct vec3d {
 	float x, y, z;
@@ -15,6 +17,42 @@ struct triangle {
 //a mesh is a collection of triangles
 struct mesh {
 	std::vector<triangle> tris;
+
+	bool LoadFromObjectFile(std::string sFilename) {
+		std::ifstream f(sFilename);
+
+		if (!f.is_open()) {
+			return false;
+		}
+
+		std::vector<vec3d> verts;
+
+		while (!f.eof()) {
+			char line[128];
+			f.getline(line, 128);
+
+			std::strstream s;
+
+			s << line;
+
+			char junk;
+			
+			if (line[0] == 'v') {
+				vec3d v;
+				s >> junk >> v.x >> v.y >> v.z;
+				verts.push_back(v);
+			}
+
+			if (line[0] == 'f') {
+				char f[3];
+				s >> junk >> f[0] >> f[1] >> f[2];
+				tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
+			}
+			
+		}
+
+		return true;
+	}
 };
 
 vec3d vCamera;
@@ -45,8 +83,9 @@ int main() {
 	//create a cube mesh
 	mesh meshCube;
 
+	meshCube.LoadFromObjectFile("space_ship_low_poly.obj");
 	//initialize the cube mesh with coordinates
-	meshCube.tris = {
+	/*meshCube.tris = {
 		//SOUTH
 		{0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, 0.0f},
 		{0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f},
@@ -76,7 +115,7 @@ int main() {
 		{1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, },
 
 
-	};
+	};*/
 
 	//get width and height of the window
 	sf::Vector2u size = window.getSize();
@@ -159,9 +198,10 @@ int main() {
 			//Translate the triangle in the z axis
 			triTranslated = triZXRotated;
 			for (int i = 0; i < 3; i++) {
-				triTranslated.p[i].z = triZXRotated.p[i].z + 3.0f;
+				triTranslated.p[i].z = triZXRotated.p[i].z + 8.0f;
 			}
-
+			
+			//calculating normal
 			vec3d line1, line2, normal;
 			line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
 			line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
@@ -225,7 +265,7 @@ int main() {
 				trianglePoints[1].color = color;
 				trianglePoints[2].color = color;
 
-				//draw the cube
+				//draw the cube	
 				window.draw(trianglePoints, 3, sf::Triangles);
 
 			}
