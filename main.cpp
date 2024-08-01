@@ -4,6 +4,8 @@
 #include <cmath>
 #include <fstream>
 #include <strstream>
+#include <sstream>
+#include <algorithm>
 //3d coordinate
 struct vec3d {
 	float x, y, z;
@@ -12,6 +14,7 @@ struct vec3d {
 //triangle is a set of 3 3d coordinates
 struct triangle {
 	vec3d p[3];
+	vec3d normal;
 };
 
 //a mesh is a collection of triangles
@@ -44,7 +47,7 @@ struct mesh {
 			}
 
 			if (line[0] == 'f') {
-				char f[3];
+				int f[3];
 				s >> junk >> f[0] >> f[1] >> f[2];
 				tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
 			}
@@ -68,6 +71,8 @@ void MultiplyMatrixVector(vec3d& i, vec3d& j, float m[4][4]) {
 	}
 }
 
+
+
 int main() {
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;//set anti aliasing level
@@ -81,9 +86,11 @@ int main() {
 	sf::Clock Clock;
 
 	//create a cube mesh
-	mesh meshCube;
+	mesh meshObj;
+	if (!meshObj.LoadFromObjectFile("spaceship_sample_triangles.obj")) {
+		return -1;
+	}
 
-	meshCube.LoadFromObjectFile("space_ship_low_poly.obj");
 	//initialize the cube mesh with coordinates
 	/*meshCube.tris = {
 		//SOUTH
@@ -180,8 +187,14 @@ int main() {
 		rotZMat[2][2] = 1.0f;
 		rotZMat[3][3] = 1.0f;
 
+
+		std::vector<triangle> vecTrianglesToRaster;
+
+		//add a ligh_direction that points to the player
+		vec3d light_direction = { 0.0f,0.0f,-1.0f };
+		
 		//normalize all triangles using projection matrix
-		for (auto& tri : meshCube.tris) {
+		for (auto& tri : meshObj.tris) {
 			triangle triProjected,triTranslated,triZRotated,triZXRotated;
 
 			//Rotate in Z axis
@@ -198,7 +211,7 @@ int main() {
 			//Translate the triangle in the z axis
 			triTranslated = triZXRotated;
 			for (int i = 0; i < 3; i++) {
-				triTranslated.p[i].z = triZXRotated.p[i].z + 8.0f;
+				triTranslated.p[i].z = triZXRotated.p[i].z + 15.0f;
 			}
 			
 			//calculating normal
@@ -219,21 +232,10 @@ int main() {
 			float mag = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
 			normal.x /= mag; normal.y /= mag; normal.z /= mag;
 
+
 			if (((normal.x) * (triTranslated.p[0].x - vCamera.x)) +
 				((normal.y) * (triTranslated.p[0].y - vCamera.y)) +
 				((normal.z) * (triTranslated.p[0].z - vCamera.z)) < 0.0f) {
-
-				//add a ligh_direction that points to the player
-				vec3d light_direction = { 0.0f,0.0f,-1.0f };
-
-				//normalize light_direction
-				float light_mag = sqrtf(light_direction.x * light_direction.x + light_direction.y * light_direction.y + light_direction.z * light_direction.z);
-
-				light_direction.x /= light_mag; light_direction.y /= light_mag; light_direction.z /= light_mag;
-
-				//get similarity b/w normal and light_direction
-				float dp = (normal.x * light_direction.x) + (normal.y * light_direction.y) + (normal.z * light_direction.z);
-
 
 				//project to 2D space
 				MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
@@ -249,26 +251,47 @@ int main() {
 					triProjected.p[i].x *= 0.5f * screenWidth;
 					triProjected.p[i].y *= 0.5f * screenHeight;
 				}
-
-				//Define and draw the triangle
-				sf::Vertex trianglePoints[] = {
-					sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
-					sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
-					sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
-				};
-
-
-				//color the cube using lighting information
-				sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp); //color(r,g,b)
-
-				trianglePoints[0].color = color;
-				trianglePoints[1].color = color;
-				trianglePoints[2].color = color;
-
-				//draw the cube	
-				window.draw(trianglePoints, 3, sf::Triangles);
+				triProjected.normal.x = normal.x;
+				triProjected.normal.y = normal.y;
+				triProjected.normal.z = normal.z;
+				vecTrianglesToRaster.push_back(triProjected);
 
 			}
+
+		}
+
+		//sort the triangles based on mid point z component of each triangle(painters algorithm)
+		sort(vecTrianglesToRaster.begin(), vecTrianglesToRaster.end(), [](triangle& t1, triangle& t2) {
+			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+			return z1 > z2;
+		});
+
+
+		for (auto& triProjected : vecTrianglesToRaster) {
+			//Define and draw the triangle
+			sf::Vertex trianglePoints[] = {
+				sf::Vector2f(triProjected.p[0].x, triProjected.p[0].y),
+				sf::Vector2f(triProjected.p[1].x, triProjected.p[1].y),
+				sf::Vector2f(triProjected.p[2].x, triProjected.p[2].y),
+			};
+
+			//normalize light_direction
+			float light_mag = sqrtf(light_direction.x * light_direction.x + light_direction.y * light_direction.y + light_direction.z * light_direction.z);
+
+			light_direction.x /= light_mag; light_direction.y /= light_mag; light_direction.z /= light_mag;
+
+			//get similarity b/w normal and light_direction
+			float dp = (triProjected.normal.x * light_direction.x) + (triProjected.normal.y * light_direction.y) + (triProjected.normal.z * light_direction.z);
+
+			sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp);
+
+			trianglePoints[0].color = color;
+			trianglePoints[1].color = color;
+			trianglePoints[2].color = color;
+
+			//draw the cube	
+			window.draw(trianglePoints, 3, sf::Triangles);
 
 		}
 
