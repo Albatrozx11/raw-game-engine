@@ -12,6 +12,20 @@ struct vec3d {
 
 	vec3d() : x(0), y(0), z(0) {};
 	vec3d(float x, float y, float z) : x(x), y(y), z(z) {};
+	
+	vec3d operator+=(float w) {
+		x += w;
+		y += w;
+		z += 0;
+		return *this;
+	}
+
+	vec3d operator*=(float w) {
+		x *= w;
+		y *= w;
+		z *= 1;
+		return *this;
+	}
 
 	vec3d operator/=(float w) {
 		x /= w;
@@ -246,12 +260,9 @@ int main() {
 				MultiplyMatrixTriangle(triTranslated, triProjected, projMatrix);
 
 				//Translate to screen space
-				triProjected.p[0].x += 1.0f;
-				triProjected.p[0].y += 1.0f;
-				triProjected.p[1].x += 1.0f;
-				triProjected.p[1].y += 1.0f;
-				triProjected.p[2].x += 1.0f;
-				triProjected.p[2].y += 1.0f;
+				triProjected.p[0] += 1.0f;
+				triProjected.p[1] += 1.0f;
+				triProjected.p[2] += 1.0f;
 
 				//scale to screen space
 				triProjected.p[0].x *= 0.5f * screenWidth;
