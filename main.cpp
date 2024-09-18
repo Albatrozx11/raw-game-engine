@@ -9,13 +9,59 @@
 //3d coordinate
 struct vec3d {
 	float x, y, z;
+
+	vec3d() : x(0), y(0), z(0) {};
+	vec3d(float x, float y, float z) : x(x), y(y), z(z) {};
+
+	vec3d operator/=(float w) {
+		x /= w;
+		y /= w;
+		z /= w;
+		return *this;
+	}
+
+	float length_squared() const {
+		return x * x + y * y + z * z;
+	}
+
+	float length() const{
+		return std::sqrtf(length_squared());
+	}
 };
+
+inline vec3d operator+(const vec3d& u, const vec3d& v) {
+	return vec3d(u.x + v.x, u.y + v.y, u.z + v.z);
+}
+
+inline vec3d operator-(const vec3d& u, const vec3d& v) {
+	return vec3d(u.x - v.x, u.y - v.y, u.z - v.z);
+}
+
+inline vec3d operator*(const vec3d& u, const vec3d& v) {
+	return vec3d(u.x * v.x, u.y * v.y, u.z * v.z);
+}
+
+inline vec3d operator/(const vec3d& u, const vec3d& v) {
+	return vec3d(u.x / v.x, u.y / v.y, u.z / v.z);
+}
+
+inline vec3d cross(const vec3d& u, const vec3d& v) {
+	return vec3d(u.y * v.z - u.z * v.y,
+		u.z * v.x - u.x * v.z,
+		u.x * v.y - u.y * v.x);
+}
+
+inline float dot(const vec3d& u, const vec3d& v) {
+	return u.x * v.x + u.y * v.y + u.z * v.z;
+}
 
 //triangle is a set of 3 3d coordinates
 struct triangle {
 	vec3d p[3];
 	vec3d normal;
 };
+
+
 
 //a mesh is a collection of triangles
 struct mesh {
@@ -39,7 +85,7 @@ struct mesh {
 			s << line;
 
 			char junk;
-			
+
 			if (line[0] == 'v') {
 				vec3d v;
 				s >> junk >> v.x >> v.y >> v.z;
@@ -51,7 +97,7 @@ struct mesh {
 				s >> junk >> f[0] >> f[1] >> f[2];
 				tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
 			}
-			
+
 		}
 
 		return true;
@@ -67,8 +113,14 @@ void MultiplyMatrixVector(vec3d& i, vec3d& j, float m[4][4]) {
 	float w = i.x * m[0][3] + i.y * m[1][3] + i.z * m[2][3] + m[3][3];
 
 	if (w != 0.0f) {
-		j.x /= w; j.y /= w; j.z /= w;
+		j /= w;
 	}
+}
+
+void MultiplyMatrixTriangle(triangle& t1, triangle& t2, float m[4][4]) {
+	MultiplyMatrixVector(t1.p[0], t2.p[0], m);
+	MultiplyMatrixVector(t1.p[1], t2.p[1], m);
+	MultiplyMatrixVector(t1.p[2], t2.p[2], m);
 }
 
 
@@ -78,7 +130,7 @@ int main() {
 	settings.antialiasingLevel = 8;//set anti aliasing level
 
 	//initialize sfml window
-	sf::RenderWindow window(sf::VideoMode(1500,800), "RAW",sf::Style::Default,settings);
+	sf::RenderWindow window(sf::VideoMode(1500, 800), "RAW", sf::Style::Default, settings);
 
 	window.setVerticalSyncEnabled(true);
 
@@ -87,42 +139,9 @@ int main() {
 
 	//create a cube mesh
 	mesh meshObj;
-	if (!meshObj.LoadFromObjectFile("spaceship_sample_triangles.obj")) {
+	if (!meshObj.LoadFromObjectFile("car_dirty.obj")) {
 		return -1;
 	}
-
-	//initialize the cube mesh with coordinates
-	/*meshCube.tris = {
-		//SOUTH
-		{0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f, 0.0f},
-		{0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 0.0f, 0.0f},
-
-
-		//EAST
-		{1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, },
-		{1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, },
-
-
-		//NORTH
-		{1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, },
-		{1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, },
-
-
-		//WEST
-		{0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, },
-		{0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, },
-
-
-		//TOP
-		{0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, },
-		{0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, },
-
-		//BOTTOM
-		{1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, },
-		{1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, },
-
-
-	};*/
 
 	//get width and height of the window
 	sf::Vector2u size = window.getSize();
@@ -134,9 +153,9 @@ int main() {
 	//define rotation matrices
 	float rotZMat[4][4] = { 0.0f };
 	float rotXMat[4][4] = { 0.0f };
-	
+
 	//projection matrix
-	float fAspectRatio =  screenHeight / screenWidth;
+	float fAspectRatio = screenHeight / screenWidth;
 	float fFov = 90.0f;
 	float fFovRad = 1.0f / tanf(fFov * 0.5f * (3.14159265359f / 180.0f));
 	float fNear = 0.1f;
@@ -146,12 +165,12 @@ int main() {
 	projMatrix[0][0] = fAspectRatio * fFovRad;
 	projMatrix[1][1] = fFovRad;
 	projMatrix[2][2] = zScaleFactor;
-	projMatrix[3][2] = -fNear * zScaleFactor ;
+	projMatrix[3][2] = -fNear * zScaleFactor;
 	projMatrix[2][3] = 1.0f;
 	projMatrix[3][3] = 0.0f;
 
 	float ftheta = 0.0f;
-	
+
 	//GAME LOOP
 	while (window.isOpen()) {
 		sf::Event event;
@@ -192,68 +211,61 @@ int main() {
 
 		//add a ligh_direction that points to the player
 		vec3d light_direction = { 0.0f,0.0f,-1.0f };
-		
+
 		//normalize all triangles using projection matrix
 		for (auto& tri : meshObj.tris) {
-			triangle triProjected,triTranslated,triZRotated,triZXRotated;
+			triangle triProjected, triTranslated, triZRotated, triZXRotated;
 
 			//Rotate in Z axis
-			MultiplyMatrixVector(tri.p[0], triZRotated.p[0], rotZMat);
-			MultiplyMatrixVector(tri.p[1], triZRotated.p[1], rotZMat);
-			MultiplyMatrixVector(tri.p[2], triZRotated.p[2], rotZMat);
+			MultiplyMatrixTriangle(tri, triZRotated, rotZMat);
 
 			//Rotate in X axis
-			MultiplyMatrixVector(triZRotated.p[0], triZXRotated.p[0], rotXMat);
-			MultiplyMatrixVector(triZRotated.p[1], triZXRotated.p[1], rotXMat);
-			MultiplyMatrixVector(triZRotated.p[2], triZXRotated.p[2], rotXMat);
+			MultiplyMatrixTriangle(triZRotated,triZXRotated, rotXMat);
 
 
 			//Translate the triangle in the z axis
 			triTranslated = triZXRotated;
-			for (int i = 0; i < 3; i++) {
-				triTranslated.p[i].z = triZXRotated.p[i].z + 15.0f;
-			}
-			
+			triTranslated.p[0].z = triZXRotated.p[0].z + 8.0f;
+			triTranslated.p[1].z = triZXRotated.p[1].z + 8.0f;
+			triTranslated.p[2].z = triZXRotated.p[2].z + 8.0f;
+
 			//calculating normal
 			vec3d line1, line2, normal;
-			line1.x = triTranslated.p[1].x - triTranslated.p[0].x;
-			line1.y = triTranslated.p[1].y - triTranslated.p[0].y;
-			line1.z = triTranslated.p[1].z - triTranslated.p[0].z;
-
-			line2.x = triTranslated.p[2].x - triTranslated.p[0].x;
-			line2.y = triTranslated.p[2].y - triTranslated.p[0].y;
-			line2.z = triTranslated.p[2].z - triTranslated.p[0].z;
-
-			normal.x = line1.y * line2.z - line1.z * line2.y;
-			normal.y = line1.z * line2.x - line1.x * line2.z;
-			normal.z = line1.x * line2.y - line1.y * line2.x;
+			line1 = triTranslated.p[1] - triTranslated.p[0];
+			line2 = triTranslated.p[2] - triTranslated.p[0];
+			normal = cross(line1, line2);
 
 			//normalize the normal
-			float mag = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-			normal.x /= mag; normal.y /= mag; normal.z /= mag;
+			normal /= normal.length();
 
+			float dp = dot(normal, (triTranslated.p[0] - vCamera));
 
-			if (((normal.x) * (triTranslated.p[0].x - vCamera.x)) +
-				((normal.y) * (triTranslated.p[0].y - vCamera.y)) +
-				((normal.z) * (triTranslated.p[0].z - vCamera.z)) < 0.0f) {
+			if (dp < 0.0f) {
 
 				//project to 2D space
-				MultiplyMatrixVector(triTranslated.p[0], triProjected.p[0], projMatrix);
-				MultiplyMatrixVector(triTranslated.p[1], triProjected.p[1], projMatrix);
-				MultiplyMatrixVector(triTranslated.p[2], triProjected.p[2], projMatrix);
+				MultiplyMatrixTriangle(triTranslated, triProjected, projMatrix);
 
-				for (int i = 0; i < 3; i++) {
-					//Translate to screen space
-					triProjected.p[i].x += 1.0f;
-					triProjected.p[i].y += 1.0f;
+				//Translate to screen space
+				triProjected.p[0].x += 1.0f;
+				triProjected.p[0].y += 1.0f;
+				triProjected.p[1].x += 1.0f;
+				triProjected.p[1].y += 1.0f;
+				triProjected.p[2].x += 1.0f;
+				triProjected.p[2].y += 1.0f;
 
-					//scale to screen space
-					triProjected.p[i].x *= 0.5f * screenWidth;
-					triProjected.p[i].y *= 0.5f * screenHeight;
-				}
-				triProjected.normal.x = normal.x;
-				triProjected.normal.y = normal.y;
-				triProjected.normal.z = normal.z;
+				//scale to screen space
+				triProjected.p[0].x *= 0.5f * screenWidth;
+				triProjected.p[0].y *= 0.5f * screenHeight;
+				triProjected.p[1].x *= 0.5f * screenWidth;
+				triProjected.p[1].y *= 0.5f * screenHeight;
+				triProjected.p[2].x *= 0.5f * screenWidth;
+				triProjected.p[2].y *= 0.5f * screenHeight;
+
+				//store normal data in the projected triangles
+				triProjected.normal = normal;
+
+
+				//add the projected triangles to a new vector
 				vecTrianglesToRaster.push_back(triProjected);
 
 			}
@@ -263,9 +275,9 @@ int main() {
 		//sort the triangles based on mid point z component of each triangle(painters algorithm)
 		sort(vecTrianglesToRaster.begin(), vecTrianglesToRaster.end(), [](triangle& t1, triangle& t2) {
 			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
-			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
-			return z1 > z2;
-		});
+		float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+		return z1 > z2;
+			});
 
 
 		for (auto& triProjected : vecTrianglesToRaster) {
@@ -277,12 +289,10 @@ int main() {
 			};
 
 			//normalize light_direction
-			float light_mag = sqrtf(light_direction.x * light_direction.x + light_direction.y * light_direction.y + light_direction.z * light_direction.z);
-
-			light_direction.x /= light_mag; light_direction.y /= light_mag; light_direction.z /= light_mag;
+			light_direction /= light_direction.length();
 
 			//get similarity b/w normal and light_direction
-			float dp = (triProjected.normal.x * light_direction.x) + (triProjected.normal.y * light_direction.y) + (triProjected.normal.z * light_direction.z);
+			float dp = dot(triProjected.normal, light_direction);
 
 			sf::Color color = sf::Color(255 * dp, 255 * dp, 255 * dp);
 
